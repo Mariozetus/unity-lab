@@ -380,6 +380,7 @@ GameObject:
   - component: {fileID: 374306214}
   - component: {fileID: 374306213}
   - component: {fileID: 374306212}
+  - component: {fileID: 374306216}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -476,12 +477,26 @@ Transform:
   m_GameObject: {fileID: 374306211}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.78, y: 1.06, z: -13.85}
+  m_LocalPosition: {x: -1.78, y: 1.31, z: -13.85}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &374306216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374306211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fb4247045660e3342b7ae1124d665187, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Unit
+  target: {fileID: 627610855}
+  speed: 3
 --- !u!1 &410087039
 GameObject:
   m_ObjectHideFlags: 0
@@ -634,7 +649,7 @@ Transform:
   m_GameObject: {fileID: 627610854}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 7.75476, y: 0.5, z: -5.42264}
+  m_LocalPosition: {x: 7.75476, y: 0.76, z: 15.3}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -812,6 +827,7 @@ GameObject:
   - component: {fileID: 1423112402}
   - component: {fileID: 1423112401}
   - component: {fileID: 1423112403}
+  - component: {fileID: 1423112404}
   m_Layer: 0
   m_Name: Path Finding
   m_TagString: Untagged
@@ -831,12 +847,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0b137a857e488a74fb1cf04b75524bee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Grid
-  player: {fileID: 374306215}
   unwalkableMask:
     serializedVersion: 2
     m_Bits: 256
   gridWorldSize: {x: 50, y: 50}
-  nodeRadius: 0.72
+  nodeRadius: 1
+  walkableSurfaces: []
   displayGridGizmos: 1
 --- !u!4 &1423112402
 Transform:
@@ -847,7 +863,7 @@ Transform:
   m_GameObject: {fileID: 1423112400}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0.57, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -865,8 +881,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0c781173e652f6b479b35a83e169a8bd, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PathFinding
-  seeker: {fileID: 374306215}
-  target: {fileID: 627610855}
+--- !u!114 &1423112404
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1423112400}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3ceebd353975ac44faf5deda37960071, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PathRequestManager
 --- !u!1 &1650976796
 GameObject:
   m_ObjectHideFlags: 0
@@ -973,7 +999,7 @@ Transform:
   m_GameObject: {fileID: 1650976796}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: -0.38, z: 0}
   m_LocalScale: {x: 50, y: 1, z: 50}
   m_ConstrainProportionsScale: 0
   m_Children: []

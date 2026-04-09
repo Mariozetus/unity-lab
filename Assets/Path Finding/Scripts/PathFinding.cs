@@ -1,12 +1,10 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PathFinding : MonoBehaviour
+public class Pathfinding : MonoBehaviour
 {
-    [SerializeField] private Transform seeker;
-    [SerializeField] private Transform target;
-
     private const int DiagonalMoveCost = 14;
     private const int StraightMoveCost = 10;
     private Grid _grid;
@@ -21,79 +19,115 @@ public class PathFinding : MonoBehaviour
         _visitedNodes = new HashSet<Node>();
     }
 
-    void Update()
+    public void StartFindPath(Vector3 startPoint, Vector3 endPoint)
     {
-        FindPath(seeker.position, target.position);
+        StartCoroutine(FindPath(startPoint, endPoint));
     }
 
-    private void FindPath(Vector3 startPoint, Vector3 endPoint)
+    private IEnumerator FindPath(Vector3 startPoint, Vector3 endPoint)
     {
+        Vector3[] waypoints = new Vector3[0];
+        bool pathSuccess = false;
+
         Node startingNode = _grid.GetNodeFromPoint(startPoint);
         Node endingNode = _grid.GetNodeFromPoint(endPoint);
 
         // TO-DO: si el nodo no es alcanzable, llegar al mas cercano
-        if(!endingNode.IsWalkable)
-            return;
-
-        _availableNodes.Clear();
-        _visitedNodes.Clear();
-
-        _availableNodes.Add(startingNode);
-
-        while(_availableNodes.Count > 0)
+        if (endingNode.IsWalkable)
         {
-            // Get the node with the lowest F cost
-            Node currentNode = _availableNodes.RemoveFirst();
-            _visitedNodes.Add(currentNode);
+            _availableNodes.Clear();
+            _visitedNodes.Clear();
 
-            // Is finished the path
-            if(currentNode == endingNode)
+            _availableNodes.Add(startingNode);
+
+            while(_availableNodes.Count > 0)
             {
-                RetracePath(startingNode, endingNode);
-                return;
-            }
+                // Get the node with the lowest F cost
+                Node currentNode = _availableNodes.RemoveFirst();
+                _visitedNodes.Add(currentNode);
 
-            // Update the neighbour costs and parents
-            List<Node> neighboursNodes = _grid.GetNodeNeighbours(currentNode);
-
-            foreach(Node neighbourNode in neighboursNodes)
-            {
-                // If is valid for path
-                if(!neighbourNode.IsWalkable || _visitedNodes.Contains(neighbourNode))
-                    continue;
-
-                int newMovementCostToNeighbour = currentNode.GCost + GetDistanceBetweenNodes(currentNode, neighbourNode);
-
-                // Update the neighbour node costs and parent if the new path is more optimal or 
-                // if the node is not in the available list
-                if(newMovementCostToNeighbour < neighbourNode.GCost || !_availableNodes.Contains(neighbourNode))
+                // Is finished the path
+                if(currentNode == endingNode)
                 {
-                    neighbourNode.GCost = newMovementCostToNeighbour;
-                    neighbourNode.HCost = GetDistanceBetweenNodes(neighbourNode, endingNode);
-                    neighbourNode.Parent = currentNode;
+                    pathSuccess = true;
+                    break;
+                }
 
-                    // Add to available nodes if is not in the list
-                    if(!_availableNodes.Contains(neighbourNode))
-                        _availableNodes.Add(neighbourNode);
+                // Update the neighbour costs and parents
+                List<Node> neighboursNodes = _grid.GetNodeNeighbours(currentNode);
+
+                foreach(Node neighbourNode in neighboursNodes)
+                {
+                    // If is valid for path
+                    if(!neighbourNode.IsWalkable || _visitedNodes.Contains(neighbourNode))
+                        continue;
+
+                    int newMovementCostToNeighbour = currentNode.GCost + GetDistanceBetweenNodes(currentNode, neighbourNode) + neighbourNode.Penalty;
+
+                    // Update the neighbour node costs and parent if the new path is more optimal or 
+                    // if the node is not in the available list
+                    if(newMovementCostToNeighbour < neighbourNode.GCost || !_availableNodes.Contains(neighbourNode))
+                    {
+                        neighbourNode.GCost = newMovementCostToNeighbour;
+                        neighbourNode.HCost = GetDistanceBetweenNodes(neighbourNode, endingNode);
+                        neighbourNode.Parent = currentNode;
+
+                        // Add to available nodes if is not in the list
+                        if(!_availableNodes.Contains(neighbourNode))
+                            _availableNodes.Add(neighbourNode);
+                        else
+                            _availableNodes.UpdateItem(neighbourNode);
+                    }
                 }
             }
         }
+        
+        yield return null;
+
+        if(pathSuccess)
+            waypoints = RetracePath(startingNode, endingNode);
+
+        PathRequestManager.Instance.FinishedProcessingPath(waypoints, pathSuccess);
     }
 
-    private void RetracePath(Node startingNode, Node endingNode)
+    private Vector3[] RetracePath(Node startingNode, Node endingNode)
     {
         List<Node> path = new List<Node>();
         Node currentNode = endingNode;
-
+        
         while(currentNode != startingNode)
         {
             path.Add(currentNode);
             currentNode = currentNode.Parent;
         }
 
-        path.Reverse();
+        Vector3[] waypoints = SimplifyPath(path);
+        Array.Reverse(waypoints);
 
-        _grid.SetPath(path);
+        return waypoints;
+    }
+
+    private Vector3[] SimplifyPath(List<Node> path)
+    {
+        if (path == null || path.Count == 0)
+            return new Vector3[0];
+
+        List<Vector3> waypoints = new List<Vector3>();
+        Vector2 previousDirection = Vector2.zero;
+
+        waypoints.Add(path[0].WorldPosition);
+
+        for (int i = 1; i < path.Count; i++)
+        {
+            Vector2 nextDirection = new Vector2(path[i - 1].GridX - path[i].GridX, path[i - 1].GridY - path[i].GridY);
+
+            if (nextDirection != previousDirection)
+                waypoints.Add(path[i].WorldPosition);
+
+            previousDirection = nextDirection;
+        }
+
+        return waypoints.ToArray();
     }
 
     // Diagonal Distance (eight directions)
@@ -118,10 +152,5 @@ public class PathFinding : MonoBehaviour
         int yDistance = Mathf.Abs(nodeA.GridY - nodeB.GridY);
 
         return xDistance + yDistance;
-    }
-
-    private bool IsNodeMoreOptimal(List<Node> candidateNodes, Node currentNode, int index)
-    {
-        return candidateNodes[index].FCost < currentNode.FCost || candidateNodes[index].FCost == currentNode.FCost && candidateNodes[index].HCost < currentNode.HCost;
     }
 }

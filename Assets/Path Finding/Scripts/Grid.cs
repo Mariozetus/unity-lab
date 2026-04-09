@@ -3,15 +3,16 @@ using UnityEngine;
 
 public class Grid : MonoBehaviour
 {
-    [SerializeField] private Transform player;
     [SerializeField] private LayerMask unwalkableMask;
     [SerializeField] private Vector2 gridWorldSize;
     [SerializeField][Min(0.15f)] private float nodeRadius;
+    [SerializeField] List<SurfaceType> walkableSurfaces;
     [SerializeField] private bool displayGridGizmos;
-    [SerializeField] private bool onlyDisplayPathGizmos;
 
     private Node[,] _grid;
-    private List<Node> _path;
+
+    private LayerMask _walkableMask;
+    private Dictionary<int, int> _walkableSurfacesDictionary = new Dictionary<int, int>();
 
     private float _nodeDiameter => nodeRadius * 2;
     private int _xGridNodeSize, _yGridNodeSize;
@@ -23,10 +24,16 @@ public class Grid : MonoBehaviour
         CreateGrid();
     }
 
-    void Start()
+    void Awake()
     {
         _xGridNodeSize = Mathf.RoundToInt(gridWorldSize.x / _nodeDiameter);
         _yGridNodeSize = Mathf.RoundToInt(gridWorldSize.y / _nodeDiameter);
+
+        foreach(SurfaceType surface in walkableSurfaces){
+            _walkableMask.value |= surface.SurfaceLayer.value;
+            _walkableSurfacesDictionary.Add(surface.LayerIndex, surface.Penalty);
+        }
+
         CreateGrid();
     }
 
@@ -46,8 +53,19 @@ public class Grid : MonoBehaviour
                     + Vector3.back * (y * _nodeDiameter + nodeRadius);
 
                 bool isWalkable = !Physics.CheckSphere(gridNodePosition, nodeRadius, unwalkableMask);
+                
+                int nodePenalty = 0;
 
-                _grid[x, y] = new Node(isWalkable, gridNodePosition, x, y);
+                if(isWalkable){
+                    Ray ray = new Ray(gridNodePosition + Vector3.up * 50, Vector3.down);
+                    RaycastHit hit;
+                    
+                    if(Physics.Raycast(ray, out hit, 100, _walkableMask))
+                        _walkableSurfacesDictionary.TryGetValue(hit.collider.gameObject.layer, out nodePenalty);
+
+                }
+
+                _grid[x, y] = new Node(isWalkable, gridNodePosition, x, y, nodePenalty);
             }
         }
     }
@@ -91,11 +109,6 @@ public class Grid : MonoBehaviour
         return neighbours;
     }
 
-    public void SetPath(List<Node> path)
-    {
-        _path = path;
-    }
-
     public int MaxSize => _xGridNodeSize * _yGridNodeSize;
 
 #if UNITY_EDITOR
@@ -103,46 +116,23 @@ public class Grid : MonoBehaviour
     {
         if(!displayGridGizmos) return;
 
-        if (onlyDisplayPathGizmos)
-        {
-            if(_path == null) return;
-            Gizmos.color = Color.blue;
-            foreach(Node node in _path)
-                Gizmos.DrawCube(node.WorldPosition, new Vector3(_nodeDiameter - 0.1f, 0.1f, _nodeDiameter - 0.1f));          
-            
-            return;
-        }
-
-
-        Vector3 gridTopLeftPosition = transform.position 
-            + Vector3.left * (gridWorldSize.x / 2) 
-            + Vector3.forward * (gridWorldSize.y / 2);
-        
-        Gizmos.DrawSphere(gridTopLeftPosition, 1);
-        Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
-        
         if (_grid != null)
         {
-            Node playerNode = GetNodeFromPoint(player.position);
-            Gizmos.color = Color.yellow;
-            Gizmos.DrawCube(playerNode.WorldPosition, new Vector3(_nodeDiameter - 0.1f, 0.1f, _nodeDiameter - 0.1f));
-
             foreach(Node node in _grid)
             {
-                if(playerNode == node)
-                    continue;
-
                 Gizmos.color = node.IsWalkable ? Color.green : Color.red;
-
-                if(_path != null)
-                {
-                    if(_path.Contains(node))
-                        Gizmos.color = Color.blue;
-                }
-
                 Gizmos.DrawCube(node.WorldPosition, new Vector3(_nodeDiameter - 0.1f, 0.1f, _nodeDiameter - 0.1f));          
             }
         }
     }
 #endif
+}
+
+[System.Serializable]
+public class SurfaceType
+{
+    [SerializeField] [SingleLayer] private int surfaceLayer;
+    public int LayerIndex => surfaceLayer;
+    public LayerMask SurfaceLayer => 1 << surfaceLayer;
+    public int Penalty;
 }
